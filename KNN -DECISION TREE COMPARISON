@@ -1,0 +1,194 @@
+# Import Libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from google.colab import files
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    classification_report
+)
+
+# ===========================
+# Upload Dataset
+# ===========================
+print("Upload exam_dataset.csv")
+uploaded = files.upload()
+
+# Read Dataset
+filename = list(uploaded.keys())[0]
+df = pd.read_csv(filename)
+
+print("\nFirst 5 Rows:")
+print(df.head())
+
+# ===========================
+# Features and Target
+# ===========================
+X = df.iloc[:, :-1]      # All columns except last
+y = df.iloc[:, -1]       # Last column (Result)
+
+# ===========================
+# Train-Test Split
+# ===========================
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+# ===========================
+# Feature Scaling for KNN
+# ===========================
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# ============================================================
+# KNN MODEL
+# ============================================================
+knn = KNeighborsClassifier(n_neighbors=5)
+
+knn.fit(X_train_scaled, y_train)
+
+knn_pred = knn.predict(X_test_scaled)
+
+knn_accuracy = accuracy_score(y_test, knn_pred)
+knn_precision = precision_score(y_test, knn_pred)
+knn_recall = recall_score(y_test, knn_pred)
+knn_f1 = f1_score(y_test, knn_pred)
+
+# ============================================================
+# DECISION TREE MODEL
+# ============================================================
+dt = DecisionTreeClassifier(random_state=42)
+
+dt.fit(X_train, y_train)
+
+dt_pred = dt.predict(X_test)
+
+dt_accuracy = accuracy_score(y_test, dt_pred)
+dt_precision = precision_score(y_test, dt_pred)
+dt_recall = recall_score(y_test, dt_pred)
+dt_f1 = f1_score(y_test, dt_pred)
+
+# ============================================================
+# PERFORMANCE TABLE
+# ============================================================
+results = pd.DataFrame({
+    "Algorithm": ["KNN", "Decision Tree"],
+    "Accuracy": [knn_accuracy, dt_accuracy],
+    "Precision": [knn_precision, dt_precision],
+    "Recall": [knn_recall, dt_recall],
+    "F1 Score": [knn_f1, dt_f1]
+})
+
+print("\nPerformance Comparison")
+print(results)
+
+# ============================================================
+# CLASSIFICATION REPORT
+# ============================================================
+print("\nKNN Classification Report")
+print(classification_report(y_test, knn_pred))
+
+print("\nDecision Tree Classification Report")
+print(classification_report(y_test, dt_pred))
+
+# ============================================================
+# ACCURACY BAR CHART
+# ============================================================
+plt.figure(figsize=(6,5))
+
+plt.bar(results["Algorithm"], results["Accuracy"])
+
+plt.title("Accuracy Comparison")
+plt.ylabel("Accuracy")
+plt.ylim(0,1)
+
+for i, v in enumerate(results["Accuracy"]):
+    plt.text(i, v+0.01, f"{v:.2f}", ha='center')
+
+plt.show()
+
+# ============================================================
+# METRIC COMPARISON
+# ============================================================
+metrics = ["Accuracy","Precision","Recall","F1 Score"]
+
+knn_scores = [
+    knn_accuracy,
+    knn_precision,
+    knn_recall,
+    knn_f1
+]
+
+dt_scores = [
+    dt_accuracy,
+    dt_precision,
+    dt_recall,
+    dt_f1
+]
+
+import numpy as np
+
+x = np.arange(len(metrics))
+width = 0.35
+
+plt.figure(figsize=(8,5))
+
+plt.bar(x-width/2, knn_scores, width, label="KNN")
+plt.bar(x+width/2, dt_scores, width, label="Decision Tree")
+
+plt.xticks(x, metrics)
+plt.ylim(0,1)
+plt.ylabel("Score")
+plt.title("KNN vs Decision Tree Performance")
+plt.legend()
+
+plt.show()
+
+# ============================================================
+# CONFUSION MATRIX - KNN
+# ============================================================
+cm_knn = confusion_matrix(y_test, knn_pred)
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm_knn,
+    display_labels=["Fail","Pass"]
+)
+
+disp.plot()
+plt.title("KNN Confusion Matrix")
+plt.show()
+
+# ============================================================
+# CONFUSION MATRIX - DECISION TREE
+# ============================================================
+cm_dt = confusion_matrix(y_test, dt_pred)
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm_dt,
+    display_labels=["Fail","Pass"]
+)
+
+disp.plot()
+plt.title("Decision Tree Confusion Matrix")
+plt.show()
+
+# ============================================================
+# SAVE COMPARISON
+# ============================================================
+results.to_csv("algorithm_comparison.csv", index=False)
+
+print("\nComparison file saved as algorithm_comparison.csv")
